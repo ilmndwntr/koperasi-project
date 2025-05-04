@@ -2,7 +2,6 @@
 
 import { cookies } from "next/headers"
 import { getSupabaseServer } from "@/lib/supabase/server"
-import bcrypt from "bcrypt"
 
 interface LoginFormData {
   email: string
@@ -13,11 +12,21 @@ export async function loginMember(data: LoginFormData) {
   try {
     const supabase = getSupabaseServer()
 
-    // Get member by email
-    const { data: member, error } = await supabase.from("members").select("*").eq("email", data.email).single()
+    // Sign in with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    })
+
+    if (authError || !authData.user) {
+      return { success: false, error: "Email atau password salah" }
+    }
+
+    // Get member by user ID
+    const { data: member, error } = await supabase.from("members").select("*").eq("id", authData.user.id).single()
 
     if (error || !member) {
-      return { success: false, error: "Email atau password salah" }
+      return { success: false, error: "Akun tidak ditemukan" }
     }
 
     // Check if member is verified
@@ -28,24 +37,6 @@ export async function loginMember(data: LoginFormData) {
     // Check if member is active
     if (!member.is_active) {
       return { success: false, error: "Akun Anda tidak aktif. Silakan hubungi admin" }
-    }
-
-    // Verify password
-    const passwordMatch = await bcrypt.compare(data.password, member.password_hash)
-
-    if (!passwordMatch) {
-      return { success: false, error: "Email atau password salah" }
-    }
-
-    // Create session
-    const { data: session, error: sessionError } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    })
-
-    if (sessionError) {
-      console.error("Session error:", sessionError)
-      return { success: false, error: "Gagal membuat sesi" }
     }
 
     // Store member ID in cookie for future use

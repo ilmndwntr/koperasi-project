@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache"
 import { getSupabaseServer } from "@/lib/supabase/server"
-import bcrypt from "bcrypt"
 import crypto from "crypto"
 
 interface RegisterFormData {
@@ -43,9 +42,16 @@ export async function registerMember(data: RegisterFormData) {
       return { success: false, error: "Nomor telepon sudah terdaftar" }
     }
 
-    // Hash password
-    const saltRounds = 10
-    const passwordHash = await bcrypt.hash(data.password, saltRounds)
+    // Create user in Supabase Auth
+    const { data: authUser, error: authError } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+    })
+
+    if (authError) {
+      console.error("Auth error:", authError)
+      return { success: false, error: "Gagal membuat akun" }
+    }
 
     // Generate verification token
     const verificationToken = crypto.randomBytes(32).toString("hex")
@@ -80,9 +86,10 @@ export async function registerMember(data: RegisterFormData) {
     const { data: member, error: memberError } = await supabase
       .from("members")
       .insert({
+        id: authUser.user?.id, // Use the Supabase Auth user ID
         email: data.email,
         phone: data.phone,
-        password_hash: passwordHash,
+        password_hash: "", // No need to store password hash as it's managed by Supabase Auth
         nik: data.nik,
         full_name: data.fullName,
         occupation: data.occupation,

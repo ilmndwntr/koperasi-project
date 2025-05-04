@@ -48,8 +48,13 @@ export async function requestPasswordReset(data: ForgotPasswordFormData) {
       return { success: false, error: "Gagal memproses permintaan" }
     }
 
-    // TODO: Send reset email
-    // This would typically be done with an email service
+    // Use Supabase Auth to send password reset email
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(data.email)
+
+    if (resetError) {
+      console.error("Password reset email error:", resetError)
+      return { success: false, error: "Gagal mengirim email reset password" }
+    }
 
     return { success: true }
   } catch (error) {

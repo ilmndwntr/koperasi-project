@@ -28,7 +28,7 @@ export default function Home() {
           </div>
           <div className="relative h-[300px] md:h-[400px]">
             <Image
-              src="/placeholder.svg?key=0isqa"
+              src="/placeholder.svg?key=gco98"
               alt="Koperasi illustration"
               fill
               className="object-contain"
